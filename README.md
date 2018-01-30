@@ -71,3 +71,7 @@ See http://talks.golang.org/2013/oscon-dl.slide
 ## Help
 
 Use the golang-nuts mailing list for any discussion or questions.
+
+## Todo
+  1. consistance->[jump_hash](github.com/renstrom/go-jump-consistent-hash)
+  2. lru->[arc](github.com/bluele/gcache)
