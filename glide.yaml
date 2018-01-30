@@ -1,0 +1,11 @@
+package: groupcache
+import:
+- package: github.com/golang/groupcache
+  subpackages:
+  - consistenthash
+  - groupcachepb
+  - lru
+  - singleflight
+- package: github.com/golang/protobuf
+  subpackages:
+  - proto

@@ -1,0 +1,18 @@
+hash: 59bbcc76bb155f8ce60b6653d6fec1fd813fc75f9f0f2a06af3bb785cb0f6f0a
+updated: 2018-01-30T11:31:13.865327096+08:00
+imports:
+- name: github.com/golang/groupcache
+  version: 84a468cf14b4376def5d68c722b139b881c450a4
+  subpackages:
+  - consistenthash
+  - groupcachepb
+  - lru
+  - singleflight
+  - testpb
+- name: github.com/golang/protobuf
+  version: 925541529c1fa6821df4e44ce2723319eb2be768
+  subpackages:
+  - proto
+- name: github.com/renstrom/go-jump-consistent-hash
+  version: fb38e599c973a35e0667e322bf02453926b96345
+testImports: []
