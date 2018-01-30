@@ -72,6 +72,13 @@ See http://talks.golang.org/2013/oscon-dl.slide
 
 Use the golang-nuts mailing list for any discussion or questions.
 
-## Todo
-  1. consistance->[jump_hash](github.com/renstrom/go-jump-consistent-hash)
-  2. lru->[arc](github.com/bluele/gcache)
+## Todo 修复一致性hash不均衡问题.
+  1. consistance->[jump_hash](https://github.com/hyhlinux/go-jump-consistent-hash)
+  2. lru->[arc](https://github.com/hyhlinux/gcache)
+  3. jump_hash在减少机器时转移策略.
+
+## Testing
+  1. 给出jump_hash各个节点实测百分比图, 均衡性.
+  2. jump_hash 在减少节点时，转移策略.(只转移丢失的主机上的key(1/n), 保证节点回复后复原)
+
+## deadline 2018-02-25
