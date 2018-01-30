@@ -18,64 +18,118 @@ limitations under the License.
 package consistenthash
 
 import (
-	"hash/crc32"
+	"sync"
 	"sort"
-	"strconv"
+	"crypto/md5"
+	jump "github.com/renstrom/go-jump-consistent-hash"
+	"encoding/hex"
+	"fmt"
 )
 
-type Hash func(data []byte) uint32
-
 type Map struct {
-	hash     Hash
-	replicas int
-	keys     []int // Sorted
-	hashMap  map[int]string
+	Mutex    sync.RWMutex
+	Replicas map[string]int
+	KeyAlive map[string]bool
+	KeyMap   map[string]bool
 }
 
-func New(replicas int, fn Hash) *Map {
+func HashNew() *Map {
 	m := &Map{
-		replicas: replicas,
-		hash:     fn,
-		hashMap:  make(map[int]string),
-	}
-	if m.hash == nil {
-		m.hash = crc32.ChecksumIEEE
+		Mutex:    sync.RWMutex{},
+		Replicas: make(map[string]int),
+		KeyMap:   make(map[string]bool),
+		KeyAlive:   make(map[string]bool),
 	}
 	return m
 }
 
-// Returns true if there are no items available.
-func (m *Map) IsEmpty() bool {
-	return len(m.keys) == 0
-}
-
 // Adds some keys to the hash.
-func (m *Map) Add(keys ...string) {
+func (m *Map) Add(replicas int, keys ...string) {
+	m.Mutex.Lock()
+	defer m.Mutex.Unlock()
 	for _, key := range keys {
-		for i := 0; i < m.replicas; i++ {
-			hash := int(m.hash([]byte(strconv.Itoa(i) + key)))
-			m.keys = append(m.keys, hash)
-			m.hashMap[hash] = key
+		if _, ok := m.KeyMap[key]; !ok {
+			m.Replicas[key] = replicas
+			m.KeyMap[key] = true
+			m.KeyAlive[key] = true
 		}
 	}
-	sort.Ints(m.keys)
 }
 
-// Gets the closest item in the hash to the provided key.
-func (m *Map) Get(key string) string {
-	if m.IsEmpty() {
-		return ""
+func (m *Map) Get(key string) (host string, err error){
+	m.Mutex.Lock()
+	defer m.Mutex.Unlock()
+
+	srcKeys := getMapKeys(m.KeyMap)
+	idx := int32(0)
+	if idx, host, err = jumpHash(key, srcKeys); err != nil {
+		return host, err
 	}
 
-	hash := int(m.hash([]byte(key)))
-
-	// Binary search for appropriate replica.
-	idx := sort.Search(len(m.keys), func(i int) bool { return m.keys[i] >= hash })
-
-	// Means we have cycled back to the first replica.
-	if idx == len(m.keys) {
-		idx = 0
+	if m.KeyMap[host] {
+		return host,  nil
 	}
 
-	return m.hashMap[m.keys[idx]]
+	keyAlive := getMapKeys(m.KeyAlive)
+	newKey := MD5(key)
+	idxMove, moveHost, err := jumpHash(newKey, keyAlive)
+	if err != nil {
+		fmt.Errorf("err:%v srcHost:%v->moveHost:%v key:%v new_key:%v idx:%v idxMove:%v", err, host, moveHost, key, newKey, idx, idxMove)
+		return moveHost, err
+	}
+	return moveHost, nil
 }
+
+func getMapKeys(srcMap map[string]bool) (keys []string) {
+	for k, _ := range srcMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func jumpHash(key string, hosts []string) (idx int32, host string, err error){
+	sort.Strings(hosts)
+	hostsLen := len(hosts)
+	if hostsLen <= 0 {
+		return idx,"", fmt.Errorf("key: %v hosts:%v is %v", key,  hosts, hostsLen)
+	}
+	idx = jump.HashString(key, int32(len(hosts)), jump.CRC32)
+	host = hosts[idx]
+	return idx, host, nil
+}
+
+func (m *Map) Update(key string, stats bool) {
+	m.Mutex.Lock()
+	defer m.Mutex.Unlock()
+	m.KeyMap[key] = stats
+	if stats {
+		m.KeyAlive[key] = true
+	}else {
+		delete(m.KeyAlive, key)
+	}
+}
+
+func (m *Map) Exist(key string) (bool){
+	m.Mutex.Lock()
+	defer m.Mutex.Unlock()
+	_, ok := m.KeyAlive[key]
+	return ok
+}
+
+func (m *Map) GetStats() interface{} {
+	m.Mutex.Lock()
+	defer m.Mutex.Unlock()
+
+	statsInfo := make(map[string]interface{})
+	statsInfo["KeyMap"] = m.KeyMap
+	statsInfo["KeyAlive"] = m.KeyAlive
+	return statsInfo
+}
+
+func MD5(text string) string{
+	ctx := md5.New()
+	ctx.Write([]byte(text))
+	return hex.EncodeToString(ctx.Sum(nil))
+}
+
