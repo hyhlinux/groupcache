@@ -25,7 +25,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/golang/groupcache/consistenthash"
+	"github.com/hyhlinux/groupcache/consistenthash"
 	pb "github.com/golang/groupcache/groupcachepb"
 	"github.com/golang/protobuf/proto"
 )
@@ -69,7 +69,6 @@ type HTTPPoolOptions struct {
 
 	// HashFn specifies the hash function of the consistent hash.
 	// If blank, it defaults to crc32.ChecksumIEEE.
-	HashFn consistenthash.Hash
 }
 
 // NewHTTPPool initializes an HTTP pool of peers, and registers itself as a PeerPicker.
@@ -107,7 +106,7 @@ func NewHTTPPoolOpts(self string, o *HTTPPoolOptions) *HTTPPool {
 	p := &HTTPPool{
 		basePath:    opts.BasePath,
 		self:        self,
-		peers:       consistenthash.New(opts.Replicas, opts.HashFn),
+		peers:       consistenthash.HashNew(),
 		httpGetters: make(map[string]*httpGetter),
 	}
 	RegisterPeerPicker(func() PeerPicker { return p })
@@ -117,11 +116,11 @@ func NewHTTPPoolOpts(self string, o *HTTPPoolOptions) *HTTPPool {
 // Set updates the pool's list of peers.
 // Each peer value should be a valid base URL,
 // for example "http://example.net:8000".
-func (p *HTTPPool) Set(peers ...string) {
+func (p *HTTPPool) Set(nodes []string, peers ...string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.peers = consistenthash.New(defaultReplicas, nil)
-	p.peers.Add(peers...)
+	p.peers = consistenthash.HashNew()
+	p.peers.Add(nodes, peers...)
 	p.httpGetters = make(map[string]*httpGetter, len(peers))
 	for _, peer := range peers {
 		p.httpGetters[peer] = &httpGetter{transport: p.Transport, baseURL: peer + p.basePath}
@@ -134,7 +133,12 @@ func (p *HTTPPool) PickPeer(key string) (ProtoGetter, bool) {
 	if p.peers.IsEmpty() {
 		return nil, false
 	}
-	if peer := p.peers.Get(key); peer != p.self {
+	peer, err := p.peers.Get(key)
+	if err != nil {
+		fmt.Errorf("PickPeer err:%v", err)
+		return nil, false
+	}
+	if peer != p.self {
 		return p.httpGetters[peer], true
 	}
 	return nil, false

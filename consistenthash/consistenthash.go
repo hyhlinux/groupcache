@@ -28,7 +28,6 @@ import (
 
 type Map struct {
 	Mutex    sync.RWMutex
-	Replicas map[string]int
 	KeyAlive map[string]bool
 	KeyMap   map[string]bool
 }
@@ -36,24 +35,40 @@ type Map struct {
 func HashNew() *Map {
 	m := &Map{
 		Mutex:    sync.RWMutex{},
-		Replicas: make(map[string]int),
 		KeyMap:   make(map[string]bool),
 		KeyAlive:   make(map[string]bool),
 	}
 	return m
 }
 
-// Adds some keys to the hash.
-func (m *Map) Add(replicas int, keys ...string) {
+// nodes: 所有节点
+// keys 活跃节点
+func (m *Map) Add(nodes []string, keys ...string) {
 	m.Mutex.Lock()
 	defer m.Mutex.Unlock()
-	for _, key := range keys {
-		if _, ok := m.KeyMap[key]; !ok {
-			m.Replicas[key] = replicas
-			m.KeyMap[key] = true
-			m.KeyAlive[key] = true
-		}
+	for _, key := range nodes {
+		m.KeyMap[key] = false
 	}
+
+	for _, key := range keys {
+		m.KeyAlive[key] = true
+		m.KeyMap[key] = true
+		//if _, ok := m.KeyMap[key]; ok {
+		//}else{
+		//	//panic()
+		//}
+	}
+
+}
+
+func (m *Map) IsEmpty()  (bool){
+	m.Mutex.Lock()
+	defer m.Mutex.Unlock()
+
+	if len(m.KeyMap) == 0 {
+		return true
+	}
+	return false
 }
 
 func (m *Map) Get(key string) (host string, err error){
@@ -99,9 +114,10 @@ func jumpHash(key string, hosts []string) (idx int32, host string, err error){
 	return idx, host, nil
 }
 
-func (m *Map) Update(key string, stats bool) {
+func (m *Map) Update(keys ...string, stats bool) {
 	m.Mutex.Lock()
 	defer m.Mutex.Unlock()
+
 	m.KeyMap[key] = stats
 	if stats {
 		m.KeyAlive[key] = true
