@@ -32,6 +32,7 @@ import (
 )
 
 var (
+	nodes = []string{"host1", "host2", "host3"}
 	peerAddrs = flag.String("test_peer_addrs", "", "Comma-separated list of peer addresses; used by TestHTTPPool")
 	peerIndex = flag.Int("test_peer_index", -1, "Index of which peer this child is; used by TestHTTPPool")
 	peerChild = flag.Bool("test_peer_child", false, "True if running as a child process; used by TestHTTPPool")
@@ -80,7 +81,7 @@ func TestHTTPPool(t *testing.T) {
 
 	// Use a dummy self address so that we don't handle gets in-process.
 	p := NewHTTPPool("should-be-ignored")
-	p.Set(addrToURL(childAddr)...)
+	p.Set(nodes, addrToURL(childAddr)...)
 
 	// Dummy getter function. Gets should go to children only.
 	// The only time this process will handle a get is when the
@@ -114,7 +115,7 @@ func beChildForTestHTTPPool() {
 	addrs := strings.Split(*peerAddrs, ",")
 
 	p := NewHTTPPool("http://" + addrs[*peerIndex])
-	p.Set(addrToURL(addrs)...)
+	p.Set(nodes, addrToURL(addrs)...)
 
 	getter := GetterFunc(func(ctx Context, key string, dest Sink) error {
 		dest.SetString(strconv.Itoa(*peerIndex) + ":" + key)

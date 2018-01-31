@@ -22,13 +22,14 @@ import (
 )
 
 var(
+	nodes = []string{"host1", "host2", "host3", "host4", "host5"}
 	hashTestData = HashNew()
 )
 
 func TestHashAdd(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		host := fmt.Sprintf("host%v", i+1)
-		hashTestData.Add(10, host)
+		hashTestData.Add(nodes, host)
 	}
 	for k, v := range hashTestData.KeyMap {
 		t.Logf("k:%v v:%v", k, v)
@@ -40,7 +41,7 @@ func TestHashAdd(t *testing.T) {
 func TestHashDel(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		host := fmt.Sprintf("host%v", i+1)
-		hashTestData.Add(10, host)
+		hashTestData.Add(nodes, host)
 	}
 	for k, v := range hashTestData.KeyMap {
 		t.Logf("k:%v v:%v", k, v)
@@ -67,7 +68,7 @@ func TestMD5(t *testing.T) {
 func TestHashGet(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		host := fmt.Sprintf("host%v", i+1)
-		hashTestData.Add(10, host)
+		hashTestData.Add(nodes, host)
 	}
 	rangeLimit := 1000
 	dieHost := "host2"
