@@ -114,7 +114,7 @@ func jumpHash(key string, hosts []string) (idx int32, host string, err error){
 	return idx, host, nil
 }
 
-func (m *Map) Update(keys ...string, stats bool) {
+func (m *Map) Update(key string, stats bool) {
 	m.Mutex.Lock()
 	defer m.Mutex.Unlock()
 
