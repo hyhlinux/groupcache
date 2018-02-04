@@ -119,8 +119,8 @@ func NewHTTPPoolOpts(self string, o *HTTPPoolOptions) *HTTPPool {
 func (p *HTTPPool) Set(nodes []string, peers ...string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.peers = consistenthash.HashNew()
-	p.peers.Add(nodes, peers...)
+	p.peers = consistenthash.HashNew(nodes)
+	p.peers.Add(peers...)
 	p.httpGetters = make(map[string]*httpGetter, len(peers))
 	for _, peer := range peers {
 		p.httpGetters[peer] = &httpGetter{transport: p.Transport, baseURL: peer + p.basePath}

@@ -1,20 +1,3 @@
-/*
-Copyright 2013 Google Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-// Package consistenthash provides an implementation of a ring hash.
 package consistenthash
 
 import (
@@ -32,33 +15,35 @@ type Map struct {
 	KeyMap   map[string]bool
 }
 
-func HashNew() *Map {
+func HashNew(nodes []string) *Map {
 	m := &Map{
 		Mutex:    sync.RWMutex{},
 		KeyMap:   make(map[string]bool),
 		KeyAlive:   make(map[string]bool),
 	}
-	return m
-}
-
-// nodes: 所有节点
-// keys 活跃节点
-func (m *Map) Add(nodes []string, keys ...string) {
 	m.Mutex.Lock()
 	defer m.Mutex.Unlock()
+
 	for _, key := range nodes {
 		m.KeyMap[key] = false
 	}
+	return m
+}
 
-	for _, key := range keys {
-		m.KeyAlive[key] = true
-		m.KeyMap[key] = true
-		//if _, ok := m.KeyMap[key]; ok {
-		//}else{
-		//	//panic()
-		//}
+// keys 活跃节点.
+func (m *Map) Add(keys ...string) {
+	m.Mutex.Lock()
+	defer m.Mutex.Unlock()
+	// 更新活跃状态
+	for k, _ := range m.KeyMap {
+		m.KeyMap[k] = false
+		delete(m.KeyAlive, k)
 	}
 
+	for _, k := range keys {
+		m.KeyMap[k] = true
+		m.KeyAlive[k] = true
+	}
 }
 
 func (m *Map) IsEmpty()  (bool){

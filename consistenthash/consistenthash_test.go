@@ -1,19 +1,3 @@
-/*
-Copyright 2013 Google Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package consistenthash
 
 import (
@@ -23,26 +7,51 @@ import (
 
 var(
 	nodes = []string{"host1", "host2", "host3", "host4", "host5"}
-	hashTestData = HashNew()
+	hashTestData = HashNew(nodes)
 )
 
 func TestHashAdd(t *testing.T) {
+	hosts := []string{}
 	for i := 0; i < 5; i++ {
 		host := fmt.Sprintf("host%v", i+1)
-		hashTestData.Add(nodes, host)
+		hosts = append(hosts, host)
 	}
-	for k, v := range hashTestData.KeyMap {
-		t.Logf("k:%v v:%v", k, v)
+	hashTestData.Add(hosts...)
+	t.Logf("Src-Keys:%v", hashTestData.KeyMap)
+	t.Logf("Alive-Keys:%v", hashTestData.KeyAlive)
+	h, err := hashTestData.Get("hello1")
+	if err != nil {
+		t.Fatal(err)
 	}
-	//t.Logf("SrcKeys:%v", hashTestData.SrcKeys)
-	t.Logf("Keys:%v", hashTestData.KeyAlive)
+	t.Logf("h:%v err:%v", h, err)
+	// 1. 丢失host2
+	t.Logf("DEL host2")
+	hashTestData.Add("host1", "host3", "host3", "host4", "host5")
+	t.Logf("Src-Keys:%v", hashTestData.KeyMap)
+	t.Logf("Alive-Keys:%v", hashTestData.KeyAlive)
+	h, err = hashTestData.Get("hello1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("h:%v err:%v", h, err)
+	// 2. add host2
+	hashTestData.Add("host1", "host2", "host3", "host3", "host4", "host5")
+	t.Logf("Src-Keys:%v", hashTestData.KeyMap)
+	t.Logf("Alive-Keys:%v", hashTestData.KeyAlive)
+	h, err = hashTestData.Get("hello1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("h:%v err:%v", h, err)
 }
 
 func TestHashDel(t *testing.T) {
+	hosts := []string{}
 	for i := 0; i < 5; i++ {
 		host := fmt.Sprintf("host%v", i+1)
-		hashTestData.Add(nodes, host)
+		hosts = append(hosts, host)
 	}
+	hashTestData.Add(hosts...)
 	for k, v := range hashTestData.KeyMap {
 		t.Logf("k:%v v:%v", k, v)
 	}
@@ -66,10 +75,12 @@ func TestMD5(t *testing.T) {
 }
 
 func TestHashGet(t *testing.T) {
+	hosts := []string{}
 	for i := 0; i < 5; i++ {
 		host := fmt.Sprintf("host%v", i+1)
-		hashTestData.Add(nodes, host)
+		hosts = append(hosts, host)
 	}
+	hashTestData.Add(hosts...)
 	rangeLimit := 1000
 	dieHost := "host2"
 	prefix := "/b/apk/a29tLm1vYmlsZS5sZWdlbmRzXzExNTIxMzMxX2U4ZGIzOTM%05d"
