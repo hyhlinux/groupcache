@@ -75,8 +75,8 @@ type HTTPPoolOptions struct {
 // For convenience, it also registers itself as an http.Handler with http.DefaultServeMux.
 // The self argument be a valid base URL that points to the current server,
 // for example "http://example.net:8000".
-func NewHTTPPool(self string) *HTTPPool {
-	p := NewHTTPPoolOpts(self, nil)
+func NewHTTPPool(self string, nodes []string) *HTTPPool {
+	p := NewHTTPPoolOpts(self, nodes, nil)
 	http.Handle(p.basePath, p)
 	return p
 }
@@ -86,7 +86,7 @@ var httpPoolMade bool
 // NewHTTPPoolOpts initializes an HTTP pool of peers with the given options.
 // Unlike NewHTTPPool, this function does not register the created pool as an HTTP handler.
 // The returned *HTTPPool implements http.Handler and must be registered using http.Handle.
-func NewHTTPPoolOpts(self string, o *HTTPPoolOptions) *HTTPPool {
+func NewHTTPPoolOpts(self string, nodes []string, o *HTTPPoolOptions) *HTTPPool {
 	if httpPoolMade {
 		panic("groupcache: NewHTTPPool must be called only once")
 	}
@@ -106,7 +106,7 @@ func NewHTTPPoolOpts(self string, o *HTTPPoolOptions) *HTTPPool {
 	p := &HTTPPool{
 		basePath:    opts.BasePath,
 		self:        self,
-		peers:       consistenthash.HashNew(),
+		peers:       consistenthash.HashNew(nodes),
 		httpGetters: make(map[string]*httpGetter),
 	}
 	RegisterPeerPicker(func() PeerPicker { return p })
